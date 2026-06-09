@@ -44,10 +44,10 @@ class DefaultFirebaseOptions {
   //   storageBucket     ← project_info.storage_bucket
   // ============================================================
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey:            'YOUR_ANDROID_API_KEY',
-    appId:             'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId:         'YOUR_PROJECT_ID',
-    storageBucket:     'YOUR_PROJECT_ID.appspot.com',
+    apiKey:            'AIzaSyAS424g5dNHzhr8yxX4bKbcx_16RzMeJok',
+    appId:             '1:897687107250:android:43e1e450cfdb463af53bab',
+    messagingSenderId: '897687107250',
+    projectId:         'etscm1',
+    storageBucket:     'etscm1.firebasestorage.app',
   );
 }

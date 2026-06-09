@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "897687107250",
+    "project_id": "etscm1",
+    "storage_bucket": "etscm1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:897687107250:android:43e1e450cfdb463af53bab",
+        "android_client_info": {
+          "package_name": "com.example.etscm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAS424g5dNHzhr8yxX4bKbcx_16RzMeJok"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

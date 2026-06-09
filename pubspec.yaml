@@ -10,34 +10,54 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase (ต้องรัน: flutterfire configure)
+  # Firebase
   firebase_core: ^3.6.0
   firebase_messaging: ^15.1.3
 
   # HTTP
   http: ^1.2.2
 
-  # Local storage (เก็บ house_number, user_id)
+  # Local storage
   shared_preferences: ^2.3.2
 
-  # UUID สำหรับสร้าง user_id เฉพาะเครื่อง
+  # UUID
   uuid: ^4.4.0
 
   # Font
   google_fonts: ^6.2.1
 
-  # Permission handler (Android 13+ notification permission)
+  # Permission handler
   permission_handler: ^11.3.1
 
-  # Intl (format วันที่ภาษาไทย)
+  # Intl
   intl: ^0.19.0
   flutter_local_notifications: ^20.1.0
 
+# ---- dev dependencies (ใช้ตอน build เท่านั้น) ----
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.4  # ← ย้ายมาไว้ที่นี่
+
+# ============================================================
+# flutter_launcher_icons config
+# ============================================================
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"   # พื้นหลัง adaptive icon Android
+  adaptive_icon_foreground: "assets/images/app_icon.png"
+  web:
+    generate: false
+  windows:
+    generate: false
+  macos:
+    generate: false
+
+# ============================================================
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
-
-# หลังเพิ่ม dependencies รัน:
-#   flutter pub get
-#   flutterfire configure   ← เชื่อม Firebase project เดียวกับ village-entry app

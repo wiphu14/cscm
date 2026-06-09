@@ -7,15 +7,12 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 // ============================================================
 // ApiService — HTTP calls เชื่อมกับ PHP backend
-// เดียวกับที่ village-entry app ใช้
 // ============================================================
 class ApiService {
-  // เปลี่ยนให้ตรงกับ server จริง (เดียวกับ entry_save.php)
-  static const String baseUrl = 'https://yourserver.com/api';
+  static const String baseUrl = 'https://ets.tswg.site/village-entry-backend/api';
 
   // ============================================================
   // 1. ลงทะเบียน FCM token + บ้านเลขที่ (ครั้งแรก)
-  // เรียก register_token.php
   // ============================================================
   static Future<Map<String, dynamic>> registerToken({
     required String userId,
@@ -29,7 +26,7 @@ class ApiService {
       if (token == null) throw Exception('ไม่สามารถดึง FCM token ได้');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/register_token.php'),
+        Uri.parse('$baseUrl/entry/register_token.php'),
         headers: {'Content-Type': 'application/json; charset=utf-8'},
         body: jsonEncode({
           'user_id':      userId,
@@ -59,7 +56,7 @@ class ApiService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await http.post(
-        Uri.parse('$baseUrl/register_token.php'),
+        Uri.parse('$baseUrl/entry/register_token.php'),
         headers: {'Content-Type': 'application/json; charset=utf-8'},
         body: jsonEncode({
           'user_id':      prefs.getString('user_id')      ?? '',
@@ -78,30 +75,45 @@ class ApiService {
 
   // ============================================================
   // 3. ดึงประวัติผู้เข้าของบ้านตัวเอง
-  // PHP endpoint: entry_list.php?house_number=1&village_id=1
+  //    รองรับ date parameter สำหรับดูย้อนหลัง
   // ============================================================
-  static Future<List<Map<String, dynamic>>> getMyEntries() async {
+  static Future<List<Map<String, dynamic>>> getMyEntries({
+    String? date,
+    String? houseNumber,
+    String? villageId,
+  }) async {
     try {
-      final prefs       = await SharedPreferences.getInstance();
-      final houseNumber = prefs.getString('house_number') ?? '';
-      final villageId   = prefs.getString('village_id')   ?? '1';
+      final prefs = await SharedPreferences.getInstance();
+      final hn    = houseNumber ?? prefs.getString('house_number') ?? '';
+      final vid   = villageId   ?? prefs.getString('village_id')   ?? '1';
 
-      final uri = Uri.parse('$baseUrl/entry_list.php').replace(
+      // วันที่ default = วันนี้
+      final now = DateTime.now();
+      final dt  = date ??
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      if (hn.isEmpty) return [];
+
+      final uri = Uri.parse('$baseUrl/entry/entry_list.php').replace(
         queryParameters: {
-          'house_number': houseNumber,
-          'village_id':   villageId,
-          'limit':        '50',
+          'house_number': hn,
+          'village_id':   vid,
+          'date':         dt,
+          'limit':        '100',
         },
       );
+
+      debugPrint('🟡 getMyEntries: $uri');
       final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      debugPrint('🟡 getMyEntries status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (data is Map && data['success'] == true && data['data'] is List) {
+          return (data['data'] as List).cast<Map<String, dynamic>>();
+        }
         if (data is List) {
           return data.cast<Map<String, dynamic>>();
-        }
-        if (data is Map && data['data'] is List) {
-          return (data['data'] as List).cast<Map<String, dynamic>>();
         }
       }
       return [];
@@ -112,7 +124,7 @@ class ApiService {
   }
 
   // ============================================================
-  // 4. อัปเดตข้อมูลบ้าน (ชื่อ, เบอร์) ใน residents table
+  // 4. อัปเดตข้อมูลบ้าน (ชื่อ, เบอร์)
   // ============================================================
   static Future<bool> updateProfile({
     required String ownerName,
@@ -121,7 +133,7 @@ class ApiService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final response = await http.post(
-        Uri.parse('$baseUrl/register_token.php'),
+        Uri.parse('$baseUrl/entry/register_token.php'),
         headers: {'Content-Type': 'application/json; charset=utf-8'},
         body: jsonEncode({
           'user_id':      prefs.getString('user_id')      ?? '',
@@ -136,6 +148,7 @@ class ApiService {
 
       return response.statusCode == 200;
     } catch (e) {
+      debugPrint('🔴 updateProfile error: $e');
       return false;
     }
   }

@@ -34,43 +34,99 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('🟡 [RegisterScreen] initState() called');
     _checkNotificationPermission();
   }
 
   Future<void> _checkNotificationPermission() async {
+    debugPrint('🟡 [Permission] กำลังตรวจสอบสิทธิ์แจ้งเตือน...');
     final status = await Permission.notification.status;
+    debugPrint('🟡 [Permission] status = $status');
     if (status.isGranted) {
+      debugPrint('🟢 [Permission] ได้รับสิทธิ์แล้ว → ข้ามไป Step 1');
       setState(() { _notifGranted = true; _step = 1; });
+    } else {
+      debugPrint('🟠 [Permission] ยังไม่ได้รับสิทธิ์ → อยู่ที่ Step 0');
     }
   }
 
   Future<void> _requestPermission() async {
+    debugPrint('🟡 [Permission] กำลังขอสิทธิ์ Firebase...');
     // iOS — Firebase ขอเอง
-    await FirebaseMessaging.instance.requestPermission(
+    final firebaseSettings = await FirebaseMessaging.instance.requestPermission(
       alert: true, badge: true, sound: true,
     );
+    debugPrint('🟡 [Permission] Firebase authorizationStatus = ${firebaseSettings.authorizationStatus}');
+
     // Android 13+
+    debugPrint('🟡 [Permission] กำลังขอสิทธิ์ Android notification...');
     final status = await Permission.notification.request();
+    debugPrint('🟡 [Permission] Android status = $status | isGranted = ${status.isGranted}');
+
     setState(() {
       _notifGranted = status.isGranted;
       if (_notifGranted) _step = 1;
     });
+
+    if (!status.isGranted) {
+      debugPrint('🔴 [Permission] ผู้ใช้ปฏิเสธสิทธิ์แจ้งเตือน');
+    }
   }
 
   // ============================================================
   // Step 1 — กรอกข้อมูลและส่ง register_token.php
   // ============================================================
   Future<void> _handleRegister() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint('🟡 [Register] กดปุ่มลงทะเบียน');
+
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('🔴 [Register] Form validation ไม่ผ่าน');
+      return;
+    }
+    debugPrint('🟢 [Register] Form validation ผ่าน');
+
     setState(() => _isLoading = true);
 
     try {
-      // สร้าง unique user_id สำหรับเครื่องนี้
+      // ---- ดึง / สร้าง user_id ----
+      debugPrint('🟡 [Register] กำลังโหลด SharedPreferences...');
       final prefs  = await SharedPreferences.getInstance();
       var userId   = prefs.getString('user_id');
+      debugPrint('🟡 [Register] user_id เดิม = $userId');
+
       if (userId == null || userId.isEmpty) {
         userId = 'resident_v${_villageCtrl.text}_h${_houseCtrl.text}_${const Uuid().v4().substring(0, 8)}';
+        debugPrint('🟡 [Register] สร้าง user_id ใหม่ = $userId');
       }
+
+      // ---- ดึง FCM Token ----
+      debugPrint('🟡 [Register] กำลังขอ FCM token...');
+      String? fcmToken;
+      try {
+        fcmToken = await FirebaseMessaging.instance.getToken();
+        debugPrint('🟢 [Register] FCM token = $fcmToken');
+      } catch (fcmErr) {
+        debugPrint('🔴 [Register] ดึง FCM token ไม่ได้: $fcmErr');
+      }
+
+      if (fcmToken == null || fcmToken.isEmpty) {
+        debugPrint('🔴 [Register] FCM token เป็น null หรือว่าง → อาจเกิดจาก Firebase ตั้งค่าไม่ถูก');
+      }
+
+      // ---- ข้อมูลที่จะส่ง ----
+      debugPrint('─────────────────────────────────');
+      debugPrint('🟡 [Register] ข้อมูลที่จะส่ง:');
+      debugPrint('   userId      = $userId');
+      debugPrint('   houseNumber = ${_houseCtrl.text.trim()}');
+      debugPrint('   villageId   = ${_villageCtrl.text.trim()}');
+      debugPrint('   ownerName   = ${_nameCtrl.text.trim()}');
+      debugPrint('   phone       = ${_phoneCtrl.text.trim()}');
+      debugPrint('   fcmToken    = $fcmToken');
+      debugPrint('─────────────────────────────────');
+
+      // ---- เรียก API ----
+      debugPrint('🟡 [Register] กำลังเรียก ApiService.registerToken...');
+      final stopwatch = Stopwatch()..start();
 
       final result = await ApiService.registerToken(
         userId:      userId,
@@ -80,8 +136,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phone:       _phoneCtrl.text.trim(),
       );
 
+      stopwatch.stop();
+      debugPrint('🟡 [Register] API ใช้เวลา ${stopwatch.elapsedMilliseconds} ms');
+      debugPrint('🟡 [Register] ผลลัพธ์จาก API = $result');
+
+      // ---- ตรวจสอบผลลัพธ์ ----
       if (result['success'] == true) {
-        // บันทึกข้อมูลใน SharedPreferences
+        debugPrint('🟢 [Register] ลงทะเบียนสำเร็จ กำลังบันทึก SharedPreferences...');
+
         await prefs.setString('user_id',      userId);
         await prefs.setString('house_number', _houseCtrl.text.trim());
         await prefs.setString('village_id',   _villageCtrl.text.trim());
@@ -89,24 +151,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await prefs.setString('phone',        _phoneCtrl.text.trim());
         await prefs.setBool  ('is_registered', true);
 
+        debugPrint('🟢 [Register] บันทึก SharedPreferences สำเร็จ');
+        debugPrint('🟢 [Register] เปลี่ยนไป Step 2 (Success)');
+
         if (mounted) setState(() => _step = 2);
 
-        // ไป HomeScreen หลัง 2 วินาที
         await Future.delayed(const Duration(seconds: 2));
+        debugPrint('🟢 [Register] กำลัง navigate ไป /home');
         if (mounted) Navigator.pushReplacementNamed(context, '/home');
       } else {
-        if (mounted) {
-          _showError(result['message'] ?? 'ลงทะเบียนไม่สำเร็จ กรุณาลองใหม่');
-        }
+        final errMsg = result['message'] ?? 'ลงทะเบียนไม่สำเร็จ กรุณาลองใหม่';
+        debugPrint('🔴 [Register] API ตอบกลับ success=false → message: $errMsg');
+        if (mounted) _showError(errMsg);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('🔴 [Register] Exception: $e');
+      debugPrint('🔴 [Register] StackTrace:\n$stack');
       if (mounted) _showError('เกิดข้อผิดพลาด: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+      debugPrint('🟡 [Register] _handleRegister() เสร็จสิ้น');
     }
   }
 
   void _showError(String msg) {
+    debugPrint('🔴 [UI] แสดง error SnackBar: $msg');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg, style: GoogleFonts.prompt()),
       backgroundColor: Colors.red.shade700,
@@ -116,6 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    debugPrint('🟡 [RegisterScreen] dispose() called');
     _houseCtrl.dispose(); _nameCtrl.dispose();
     _phoneCtrl.dispose(); _villageCtrl.dispose();
     super.dispose();
@@ -126,6 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ============================================================
   @override
   Widget build(BuildContext context) {
+    debugPrint('🟡 [RegisterScreen] build() step=$_step');
     return Scaffold(
       backgroundColor: const Color(0xFFF0F7FF),
       body: SafeArea(

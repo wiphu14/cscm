@@ -8,8 +8,8 @@ import 'settings_screen.dart';
 
 // ============================================================
 // HomeScreen — หน้าหลัก หลังลงทะเบียนแล้ว
-// - แสดงบ้านเลขที่และสถานะการแจ้งเตือน
-// - รายการผู้เข้าล่าสุดของบ้านตัวเอง
+// - แสดงประวัติผู้เข้าเฉพาะวันนี้
+// - เปลี่ยนวันได้ด้วยปุ่ม < >
 // - real-time update เมื่อรับ FCM foreground
 // ============================================================
 class HomeScreen extends StatefulWidget {
@@ -19,20 +19,25 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _houseNumber  = '';
-  String _ownerName    = '';
-  String _villageId    = '1';
-  bool   _isLoading    = true;
-  bool   _hasNewAlert  = false;
+  String _houseNumber = '';
+  String _ownerName   = '';
+  String _villageId   = '1';
+  bool   _isLoading   = true;
+  bool   _hasNewAlert = false;
+
+  // วันที่ที่แสดงอยู่ตอนนี้ (เริ่มต้นเป็นวันนี้)
+  DateTime _selectedDate = DateTime.now();
 
   List<EntryModel> _entries     = [];
-  EntryModel?      _latestAlert; // alert ที่เพิ่งได้รับ (foreground)
+  EntryModel?      _latestAlert;
 
+  // ============================================================
+  // Init
+  // ============================================================
   @override
   void initState() {
     super.initState();
-    _loadProfile();
-    _loadEntries();
+    _loadProfile().then((_) => _loadEntries());
     _listenForegroundMessages();
   }
 
@@ -45,17 +50,34 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // ============================================================
+  // โหลดข้อมูลตามวันที่เลือก
+  // ============================================================
   Future<void> _loadEntries() async {
+    if (_houseNumber.isEmpty) return;
     setState(() => _isLoading = true);
-    final data = await ApiService.getMyEntries();
+
+    final dateStr = _formatDateParam(_selectedDate);
+    final data    = await ApiService.getMyEntries(
+      date:        dateStr,
+      houseNumber: _houseNumber,
+      villageId:   _villageId,
+    );
+
     setState(() {
       _entries   = data.map(EntryModel.fromJson).toList();
       _isLoading = false;
+      // ถ้าเปลี่ยนกลับมาวันนี้ ล้าง new alert
+      if (_isToday(_selectedDate)) {
+        // คงไว้
+      } else {
+        _hasNewAlert = false;
+      }
     });
   }
 
   // ============================================================
-  // รับ FCM ตอน foreground — เพิ่มที่ด้านบนของรายการทันที
+  // รับ FCM ตอน foreground
   // ============================================================
   void _listenForegroundMessages() {
     FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
@@ -64,13 +86,43 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _latestAlert = entry;
         _hasNewAlert = true;
-        _entries.insert(0, entry); // เพิ่มด้านบนรายการ
+        // เพิ่มในรายการเฉพาะถ้ากำลังดูวันนี้
+        if (_isToday(_selectedDate)) {
+          _entries.insert(0, entry);
+        }
       });
-      // auto dismiss alert banner หลัง 8 วินาที
       Future.delayed(const Duration(seconds: 8), () {
         if (mounted) setState(() => _latestAlert = null);
       });
     });
+  }
+
+  // ============================================================
+  // เปลี่ยนวัน
+  // ============================================================
+  void _changeDate(int days) {
+    final newDate = _selectedDate.add(Duration(days: days));
+    // ไม่ให้เลือกวันในอนาคต
+    if (newDate.isAfter(DateTime.now())) return;
+    setState(() => _selectedDate = newDate);
+    _loadEntries();
+  }
+
+  bool _isToday(DateTime d) {
+    final now = DateTime.now();
+    return d.year == now.year && d.month == now.month && d.day == now.day;
+  }
+
+  String _formatDateParam(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _formatDateDisplay(DateTime d) {
+    const thMonths = [
+      '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+    ];
+    final year = d.year + 543;
+    return '${d.day} ${thMonths[d.month]} $year';
   }
 
   // ============================================================
@@ -89,19 +141,22 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(child: _buildHouseCard()),
             if (_latestAlert != null)
               SliverToBoxAdapter(child: _buildAlertBanner()),
+            SliverToBoxAdapter(child: _buildDateSelector()),
             SliverToBoxAdapter(child: _buildSectionTitle()),
             _isLoading
                 ? const SliverFillRemaining(
                     child: Center(
-                      child: CircularProgressIndicator(
-                          color: Color(0xFF1565C0)),
+                      child: CircularProgressIndicator(color: Color(0xFF1565C0)),
                     ),
                   )
                 : _entries.isEmpty
                     ? SliverFillRemaining(child: _buildEmpty())
                     : SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (context, i) => _buildEntryCard(_entries[i], i == 0 && _hasNewAlert),
+                          (ctx, i) => _buildEntryCard(
+                            _entries[i],
+                            i == 0 && _hasNewAlert && _isToday(_selectedDate),
+                          ),
                           childCount: _entries.length,
                         ),
                       ),
@@ -124,7 +179,6 @@ class _HomeScreenState extends State<HomeScreen> {
           fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
       ),
       actions: [
-        // badge เมื่อมี alert ใหม่
         Stack(
           alignment: Alignment.topRight,
           children: [
@@ -168,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             width: 60, height: 60,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(Icons.home_rounded, size: 34, color: Colors.white),
@@ -181,14 +235,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   'บ้านเลขที่ $_houseNumber',
                   style: GoogleFonts.prompt(
-                    fontSize: 22, fontWeight: FontWeight.w700,
-                    color: Colors.white),
+                    fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
                 Text(
                   _ownerName.isNotEmpty ? _ownerName : 'ลูกบ้าน',
                   style: GoogleFonts.prompt(
-                    fontSize: 13, color: Colors.white70,
-                    fontWeight: FontWeight.w300),
+                    fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w300),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -215,13 +267,11 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 '${_entries.length}',
                 style: GoogleFonts.prompt(
-                  fontSize: 28, fontWeight: FontWeight.w700,
-                  color: Colors.white),
+                  fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white),
               ),
               Text(
                 'ผู้เข้า',
-                style: GoogleFonts.prompt(
-                  fontSize: 11, color: Colors.white60),
+                style: GoogleFonts.prompt(fontSize: 11, color: Colors.white60),
               ),
             ],
           ),
@@ -230,7 +280,77 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ---- Alert Banner (foreground) ----
+  // ---- Date Selector ----
+  Widget _buildDateSelector() {
+    final isToday = _isToday(_selectedDate);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1565C0).withValues(alpha: 0.06),
+            blurRadius: 8, offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // ปุ่มวันก่อนหน้า
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded, color: Color(0xFF1565C0)),
+            onPressed: () => _changeDate(-1),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
+
+          // วันที่ + label
+          Column(
+            children: [
+              Text(
+                _formatDateDisplay(_selectedDate),
+                style: GoogleFonts.prompt(
+                  fontSize: 15, fontWeight: FontWeight.w600,
+                  color: const Color(0xFF0D47A1)),
+              ),
+              if (isToday)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'วันนี้',
+                    style: GoogleFonts.prompt(
+                      fontSize: 10, color: const Color(0xFF1565C0),
+                      fontWeight: FontWeight.w500),
+                  ),
+                ),
+            ],
+          ),
+
+          // ปุ่มวันถัดไป (disabled ถ้าเป็นวันนี้)
+          IconButton(
+            icon: Icon(
+              Icons.chevron_right_rounded,
+              color: isToday
+                  ? Colors.grey.shade300
+                  : const Color(0xFF1565C0),
+            ),
+            onPressed: isToday ? null : () => _changeDate(1),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---- Alert Banner ----
   Widget _buildAlertBanner() {
     final e = _latestAlert!;
     return AnimatedSwitcher(
@@ -248,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
@@ -258,26 +378,25 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '⚠️ มีคนมาหาบ้านคุณ!',
-                    style: GoogleFonts.prompt(
-                      fontSize: 13, fontWeight: FontWeight.w700,
-                      color: Colors.white),
-                  ),
+                  Text('⚠️ มีคนมาหาบ้านคุณ!',
+                      style: GoogleFonts.prompt(
+                        fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
                   Text(
                     '${e.contactName}  ${e.licensePlate.isNotEmpty ? "| ${e.licensePlate}" : ""}',
                     style: GoogleFonts.prompt(
-                      fontSize: 12, color: Colors.white.withOpacity(0.9)),
+                      fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
                   ),
                   if (e.purpose.isNotEmpty)
                     Text(e.purpose,
-                        style: GoogleFonts.prompt(
-                          fontSize: 11, color: Colors.white70)),
+                        style: GoogleFonts.prompt(fontSize: 11, color: Colors.white70)),
                 ],
               ),
             ),
             GestureDetector(
-              onTap: () => setState(() { _latestAlert = null; _hasNewAlert = false; }),
+              onTap: () => setState(() {
+                _latestAlert = null;
+                _hasNewAlert = false;
+              }),
               child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
             ),
           ],
@@ -286,10 +405,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ---- Section title ----
+  // ---- Section Title ----
   Widget _buildSectionTitle() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -301,21 +420,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           GestureDetector(
             onTap: _loadEntries,
-            child: Text(
-              'รีเฟรช',
-              style: GoogleFonts.prompt(
-                fontSize: 12, color: const Color(0xFF1E88E5)),
-            ),
+            child: Text('รีเฟรช',
+                style: GoogleFonts.prompt(
+                  fontSize: 12, color: const Color(0xFF1E88E5))),
           ),
         ],
       ),
     );
   }
 
-  // ---- Entry card ----
+  // ---- Entry Card ----
   Widget _buildEntryCard(EntryModel e, bool isNew) {
     final timeStr = _formatTime(e.entryTime);
-
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       decoration: BoxDecoration(
@@ -326,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
             : Border.all(color: const Color(0xFFBBDEFB), width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1565C0).withOpacity(0.06),
+            color: const Color(0xFF1565C0).withValues(alpha: 0.06),
             blurRadius: 12, offset: const Offset(0, 2),
           ),
         ],
@@ -336,26 +452,16 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // avatar / photo
             Container(
               width: 52, height: 52,
               decoration: BoxDecoration(
-                color: isNew
-                    ? const Color(0xFFE3F2FD)
-                    : const Color(0xFFF5F5F5),
+                color: isNew ? const Color(0xFFE3F2FD) : const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                Icons.person_rounded,
-                size: 30,
-                color: isNew
-                    ? const Color(0xFF1565C0)
-                    : Colors.grey.shade400,
-              ),
+              child: Icon(Icons.person_rounded, size: 30,
+                  color: isNew ? const Color(0xFF1565C0) : Colors.grey.shade400),
             ),
             const SizedBox(width: 12),
-
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,8 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       if (isNew)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFF5722),
                             borderRadius: BorderRadius.circular(20),
@@ -387,8 +492,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-
-                  // ทะเบียน + จุดหมาย
                   if (e.licensePlate.isNotEmpty && e.licensePlate != '-')
                     Row(children: [
                       const Icon(Icons.directions_car_rounded,
@@ -399,10 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontSize: 12, color: const Color(0xFF1E88E5),
                             fontWeight: FontWeight.w500)),
                     ]),
-
                   const SizedBox(height: 4),
-
-                  // tags
                   Wrap(
                     spacing: 6, runSpacing: 4,
                     children: [
@@ -415,13 +515,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-
-            // เวลา
-            Text(
-              timeStr,
-              style: GoogleFonts.prompt(
-                fontSize: 11, color: Colors.blueGrey.shade400),
-            ),
+            Text(timeStr,
+                style: GoogleFonts.prompt(
+                  fontSize: 11, color: Colors.blueGrey.shade400)),
           ],
         ),
       ),
@@ -431,29 +527,38 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTag(String text, Color bg, Color fg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
       child: Text(text,
           style: GoogleFonts.prompt(
             fontSize: 10, color: fg, fontWeight: FontWeight.w500)),
     );
   }
 
-  // ---- Empty state ----
+  // ---- Empty State ----
   Widget _buildEmpty() {
+    final isToday = _isToday(_selectedDate);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.inbox_rounded, size: 64, color: Colors.blueGrey.shade200),
           const SizedBox(height: 12),
-          Text('ยังไม่มีผู้เข้าบ้านเลขที่ $_houseNumber',
-              style: GoogleFonts.prompt(
-                fontSize: 14, color: Colors.blueGrey.shade400)),
-          const SizedBox(height: 6),
-          Text('ดึงข้อมูลลงเพื่อรีเฟรช',
-              style: GoogleFonts.prompt(
-                fontSize: 12, color: Colors.blueGrey.shade300)),
+          Text(
+            'ไม่มีผู้เข้าบ้านเลขที่ $_houseNumber',
+            style: GoogleFonts.prompt(fontSize: 14, color: Colors.blueGrey.shade400),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'วันที่ ${_formatDateDisplay(_selectedDate)}',
+            style: GoogleFonts.prompt(fontSize: 12, color: Colors.blueGrey.shade300),
+          ),
+          if (isToday) ...[
+            const SizedBox(height: 6),
+            Text(
+              'ดึงข้อมูลลงเพื่อรีเฟรช',
+              style: GoogleFonts.prompt(fontSize: 12, color: Colors.blueGrey.shade300),
+            ),
+          ],
         ],
       ),
     );
@@ -461,12 +566,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatTime(String raw) {
     try {
-      final dt = DateTime.parse(raw).toLocal();
-      final now = DateTime.now();
+      final dt   = DateTime.parse(raw).toLocal();
+      final now  = DateTime.now();
       final diff = now.difference(dt);
-      if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
-      if (diff.inHours < 24)   return '${diff.inHours} ชม.ที่แล้ว';
-      return '${dt.day}/${dt.month}/${dt.year + 543}';
+      if (_isToday(_selectedDate)) {
+        if (diff.inMinutes < 1)  return 'เพิ่งเข้า';
+        if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
+        if (diff.inHours   < 24) return '${diff.inHours} ชม.ที่แล้ว';
+      }
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} น.';
     } catch (_) {
       return raw;
     }

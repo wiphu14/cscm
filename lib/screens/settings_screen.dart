@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/api_service.dart';
 
 // ============================================================
@@ -20,7 +19,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _houseNumber = '';
   String _villageId   = '1';
   String _userId      = '';
-  String _fcmToken    = '';
   bool   _isSaving    = false;
   bool   _saved       = false;
 
@@ -32,12 +30,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = await FirebaseMessaging.instance.getToken();
     setState(() {
       _houseNumber        = prefs.getString('house_number') ?? '';
       _villageId          = prefs.getString('village_id')   ?? '1';
       _userId             = prefs.getString('user_id')      ?? '';
-      _fcmToken           = token ?? '';
       _nameCtrl.text  = prefs.getString('owner_name')   ?? '';
       _phoneCtrl.text = prefs.getString('phone')        ?? '';
     });
@@ -179,25 +175,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // -- FCM Token (debug) --
-            _buildSection(
-              title: 'FCM Token (สำหรับ debug)',
-              icon:  Icons.key_rounded,
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _fcmToken.isEmpty ? 'ไม่พบ token' : _fcmToken,
-                  style: GoogleFonts.sourceCodePro(
-                    fontSize: 10, color: Colors.blueGrey.shade700),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
             const SizedBox(height: 24),
 
             // -- ลงทะเบียนใหม่ --
@@ -241,7 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1565C0).withOpacity(0.06),
+            color: const Color(0xFF1565C0).withValues(alpha: 0.06),
             blurRadius: 12, offset: const Offset(0, 2),
           ),
         ],
