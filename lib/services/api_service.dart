@@ -87,7 +87,6 @@ class ApiService {
       final hn    = houseNumber ?? prefs.getString('house_number') ?? '';
       final vid   = villageId   ?? prefs.getString('village_id')   ?? '1';
 
-      // วันที่ default = วันนี้
       final now = DateTime.now();
       final dt  = date ??
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
@@ -149,6 +148,88 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('🔴 updateProfile error: $e');
+      return false;
+    }
+  }
+
+  // ============================================================
+  // 5. ยืนยันการติดต่อสำเร็จ (เครื่องที่ 2 → server → เครื่องที่ 1)
+  // ============================================================
+  static Future<Map<String, dynamic>> confirmContact({
+    required int    logId,
+    required String villageId,
+    String? houseNumber,
+    String? confirmedBy,
+    String? note,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hn    = houseNumber ?? prefs.getString('house_number') ?? '';
+      final name  = confirmedBy ?? prefs.getString('owner_name')   ?? 'ลูกบ้าน';
+
+      debugPrint('🟡 confirmContact: log_id=$logId house=$hn');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/entry/confirm_contact.php'),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode({
+          'log_id':       logId,
+          'village_id':   int.tryParse(villageId) ?? 1,
+          'house_number': hn,
+          'confirmed_by': name,
+          'note':         note ?? '',
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('🟡 confirmContact status: ${response.statusCode}');
+      debugPrint('🟡 confirmContact body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return {
+        'success': false,
+        'message': 'Server error ${response.statusCode}',
+      };
+    } catch (e) {
+      debugPrint('🔴 confirmContact error: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // ============================================================
+  // 6. ลงทะเบียน FCM token ของเครื่อง Sunmi (ป้อม รปภ.)
+  //    เรียกจากแอปเครื่องที่ 1 ตอน login สำเร็จ
+  // ============================================================
+  static Future<bool> registerGuardDevice({
+    required String villageId,
+    required String deviceUuid,
+    String deviceName = 'Sunmi Guard',
+  }) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) {
+        debugPrint('🔴 registerGuardDevice: FCM token null');
+        return false;
+      }
+
+      debugPrint('🟡 registerGuardDevice: village=$villageId uuid=$deviceUuid');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/sunmi/register_guard_device.php'),
+        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        body: jsonEncode({
+          'village_id':  int.tryParse(villageId) ?? 1,
+          'fcm_token':   token,
+          'device_uuid': deviceUuid,
+          'device_name': deviceName,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('🟡 registerGuardDevice status: ${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('🔴 registerGuardDevice error: $e');
       return false;
     }
   }
