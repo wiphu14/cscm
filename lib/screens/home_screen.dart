@@ -373,7 +373,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             width: 60, height: 60,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(Icons.home_rounded, size: 34, color: Colors.white),
@@ -442,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1565C0).withValues(alpha: 0.06),
+            color: const Color(0xFF1565C0).withOpacity(0.06),
             blurRadius: 8, offset: const Offset(0, 2),
           ),
         ],
@@ -512,7 +512,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
@@ -528,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     '${e.contactName}  ${e.licensePlate.isNotEmpty ? "| ${e.licensePlate}" : ""}',
                     style: GoogleFonts.prompt(
-                      fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
+                      fontSize: 12, color: Colors.white.withOpacity(0.9)),
                   ),
                   if (e.purpose.isNotEmpty)
                     Text(e.purpose,
@@ -607,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 : Border.all(color: const Color(0xFFBBDEFB), width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1565C0).withValues(alpha: 0.06),
+            color: const Color(0xFF1565C0).withOpacity(0.06),
             blurRadius: 12, offset: const Offset(0, 2),
           ),
         ],

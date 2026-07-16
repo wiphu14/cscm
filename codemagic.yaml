@@ -1,0 +1,65 @@
+workflows:
+  ios-release-workflow:
+    name: iOS Release Workflow
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic_asc_key   # ชื่อ integration ที่ตั้งไว้ใน Codemagic UI (ขั้นตอนที่ 3 ด้านล่าง)
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.nutrada.residentalert
+      vars:
+        APP_STORE_APPLE_ID: 6791414685         # Apple ID ของแอป Alert Entry
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+      flutter: stable
+      xcode: latest      # บังคับใช้ Xcode รุ่นล่าสุด (26+) ตามข้อกำหนดใหม่ของ Apple
+      cocoapods: default
+
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        script: |
+          find . -name "Podfile" -maxdepth 2 -execdir pod install \;
+
+      - name: Set up automatic code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Flutter build ipa (auto-increment build number)
+        script: |
+          BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID") + 1))
+          flutter build ipa --release \
+            --build-name=1.0.$BUILD_NUMBER \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      email:
+        recipients:
+          - wiphueng48@gmail.com     # เปลี่ยนเป็นอีเมลของพี่ จะได้รับแจ้งเตือนเมื่อ build เสร็จ
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true      # ส่งขึ้น TestFlight อัตโนมัติหลัง build ผ่าน
+        # submit_to_app_store: true      # เปิดบรรทัดนี้เมื่อพร้อม submit review ขึ้น App Store จริง (ไม่ใช่แค่ TestFlight)

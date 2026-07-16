@@ -1,9 +1,6 @@
 // ============================================================
-// firebase_options.dart — Android Only
+// firebase_options.dart — Android + iOS
 // ไฟล์นี้: lib/firebase_options.dart
-//
-// ใส่ค่าจริงจาก google-services.json ที่ดาวน์โหลดจาก
-// Firebase Console แทนที่ YOUR_... ทุกตัวด้านล่าง
 // ============================================================
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
@@ -22,10 +19,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'iOS is not configured in this build. '
-          'Add iOS app in Firebase Console if needed.',
-        );
+        return ios; // ← เพิ่ม iOS support
       default:
         throw UnsupportedError(
           'Platform ${defaultTargetPlatform.name} is not supported.',
@@ -34,14 +28,7 @@ class DefaultFirebaseOptions {
   }
 
   // ============================================================
-  // ANDROID
-  // ดูค่าทั้งหมดจาก google-services.json ที่ดาวน์โหลดมา:
-  //
-  //   apiKey            ← client[0].api_key[0].current_key
-  //   appId             ← client[0].client_info.mobilesdk_app_id
-  //   messagingSenderId ← project_info.project_number
-  //   projectId         ← project_info.project_id
-  //   storageBucket     ← project_info.storage_bucket
+  // ANDROID — ค่าเดิม ไม่มีการเปลี่ยนแปลง
   // ============================================================
   static const FirebaseOptions android = FirebaseOptions(
     apiKey:            'AIzaSyAS424g5dNHzhr8yxX4bKbcx_16RzMeJok',
@@ -49,5 +36,17 @@ class DefaultFirebaseOptions {
     messagingSenderId: '897687107250',
     projectId:         'etscm1',
     storageBucket:     'etscm1.firebasestorage.app',
+  );
+
+  // ============================================================
+  // iOS — ค่าจาก GoogleService-Info.plist
+  // ============================================================
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey:            'AIzaSyDD9Bthr-13NW7MrwDCqnnCUXkDhMW_Q7A',
+    appId:             '1:897687107250:ios:dcc9690af9df184cf53bab',
+    messagingSenderId: '897687107250',
+    projectId:         'etscm1',
+    storageBucket:     'etscm1.firebasestorage.app',
+    iosBundleId:       'com.nutrada.residentalert',
   );
 }

@@ -1,0 +1,18 @@
+"/Users/nutrada/Documents/cscm/ios/Pods/FirebaseCoreInternal/FirebaseCore/Internal/Sources/HeartbeatLogging/HeartbeatsBundle.swift":
+  swift-dependencies: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatsBundle.swiftdeps"
+  object: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatsBundle.o"
+  const-values: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatsBundle.swiftconstvalues"
+  diagnostics: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatsBundle.dia"
+  dependencies: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatsBundle.d"
+"/Users/nutrada/Documents/cscm/ios/Pods/FirebaseCoreInternal/FirebaseCore/Internal/Sources/HeartbeatLogging/HeartbeatController.swift":
+  const-values: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatController.swiftconstvalues"
+  dependencies: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatController.d"
+  diagnostics: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatController.dia"
+  object: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatController.o"
+  swift-dependencies: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatController.swiftdeps"
+"/Users/nutrada/Documents/cscm/ios/Pods/FirebaseCoreInternal/FirebaseCore/Internal/Sources/HeartbeatLogging/HeartbeatLoggingTestUtils.swift":
+  swift-dependencies: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatLoggingTestUtils.swiftdeps"
+  diagnostics: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatLoggingTestUtils.dia"
+  dependencies: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatLoggingTestUtils.d"
+  const-values: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatLoggingTestUtils.swiftconstvalues"
+  object: "/Users/nutrada/Documents/cscm/ios/build/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/FirebaseCoreInternal.build/Objects-normal/x86_64/HeartbeatLoggingTestUtils.o"
