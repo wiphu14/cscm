@@ -29,7 +29,7 @@ workflows:
 
       - name: Install CocoaPods dependencies
         script: |
-          find . -name "Podfile" -maxdepth 2 -execdir pod install \;
+          find . -name "Podfile" -maxdepth 2 -execdir pod install --repo-update \;
 
       - name: Set up automatic code signing
         script: |
