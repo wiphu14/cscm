@@ -12,6 +12,7 @@ workflows:
         bundle_identifier: com.nutrada.residentalert
       vars:
         APP_STORE_APPLE_ID: 6791414685         # Apple ID ของแอป Alert Entry
+        BUNDLE_ID: com.nutrada.residentalert   # ใช้ในสคริปต์ fetch-signing-files ด้านล่าง (ต้องตรงกับ bundle_identifier ด้านบน)
         XCODE_WORKSPACE: "ios/Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
       flutter: stable
