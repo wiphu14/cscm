@@ -35,6 +35,11 @@ workflows:
         script: |
           find . -name "Podfile" -maxdepth 2 -execdir pod install --repo-update \;
 
+      - name: Workaround Firebase non-modular header issue (Xcode 16+)
+        script: |
+          echo 'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES' >> ios/Flutter/Debug.xcconfig
+          echo 'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES' >> ios/Flutter/Release.xcconfig
+
       - name: Set up automatic code signing
         script: |
           keychain initialize
